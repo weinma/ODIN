@@ -100,13 +100,15 @@ const geometryType = feature => {
 
 export default (feature, resolution) => {
   const provider = R.cond([
-    [R.equals('Point'), R.always(symbolStyle)],
+    [R.equals({ type: 'Point', hasOffset: false }), R.always(symbolStyle)],
     [R.T, R.always(defaultStyle)]
   ])
+  const hasOffset = !!feature.get('offset')
+
 
   // Only cache style when not selected.
   const type = geometryType(feature)
-  const style = provider(type)(feature, resolution)
+  const style = provider({ type, hasOffset })(feature, resolution)
   if (!feature.get('selected')) {
     feature.setStyle(style)
   }
