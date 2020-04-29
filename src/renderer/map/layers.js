@@ -9,7 +9,7 @@ import { Vector as VectorSource } from 'ol/source'
 import { Vector as VectorLayer } from 'ol/layer'
 import { GeoJSON } from 'ol/format'
 import Feature from 'ol/Feature'
-import { fromLonLat } from 'ol/proj'
+import { fromLonLat, transform } from 'ol/proj'
 import { Select, Modify, Translate, DragBox } from 'ol/interaction'
 import { click, primaryAction, platformModifierKeyOnly } from 'ol/events/condition'
 
@@ -18,6 +18,7 @@ import style from './style/style'
 import project from '../project'
 import undo from '../undo'
 import selection from '../selection'
+import Point from 'ol/geom/Point'
 
 
 // --
@@ -166,6 +167,21 @@ const featuresById = ids =>
  */
 let featureCollections = {}
 
+const mapFeature = feature => {
+  const { offset, ...properties } = feature.getProperties()
+  if (!offset) return [feature]
+
+  const offsetMarker = new Feature()
+  offsetMarker.setProperties({
+    ...properties,
+    geometry: new Point(transform(offset, 'EPSG:4326', 'EPSG:3857')),
+    originalFeature: feature,
+    offsetHandle: true
+  })
+
+  return [offsetMarker, feature]
+}
+
 /**
  * addFeatureCollection :: [string, ol/Collection<ol/Feature>] -> unit
  */
@@ -175,8 +191,8 @@ const addFeatureCollection = ([layerUri, features]) => {
   // Add features to corresponding source and
   // propagate feature collection updates to sources.
 
-  features.forEach(feature => geometrySource(feature).addFeature(feature))
-  features.on('add', ({ element }) => geometrySource(element).addFeature(element))
+  features.forEach(feature => geometrySource(feature).addFeatures(mapFeature(feature)))
+  features.on('add', ({ element }) => geometrySource(element).addFeatures(mapFeature(element)))
 
   features.on('remove', ({ element }) => {
     const source = selection.isSelected(element.getId())
