@@ -179,6 +179,7 @@ const mapFeature = (feature, layerId) => {
     offsetHandle: true
   })
   assignFeatureId(layerId)(offsetMarker)
+  feature.set('offsetMarker', offsetMarker)
 
   return [offsetMarker, feature]
 }
@@ -293,15 +294,21 @@ const selectedFeatures = new Collection()
  * select :: [ol/Feature] => unit
  * Update selection without updating collection.
  */
-const select = features =>
-  selection.select(features.map(featureId))
+const select = features => {
+  const originalFeatures = features.filter(feature => feature.get('originalFeature')).map(feature => feature.get('originalFeature'))
+  const offsetFeatures = features.filter(feature => feature.get('offsetMarker')).map(feature => feature.get('offsetMarker'))
+  selection.select([...features, ...originalFeatures, ...offsetFeatures].map(featureId))
+}
 
 /**
  * deselect :: [Feature] => unit
  * Update selection without updating collection.
  */
-const deselect = features =>
-  selection.deselect(features.map(featureId))
+const deselect = features => {
+  const originalFeatures = features.filter(feature => feature.get('originalFeature')).map(feature => feature.get('originalFeature'))
+  const offsetFeatures = features.filter(feature => feature.get('offsetMarker')).map(feature => feature.get('offsetMarker'))
+  selection.deselect([...features, ...originalFeatures, ...offsetFeatures].map(featureId))
+}
 
 /**
  * addSelection :: [Feature] => unit
