@@ -1,10 +1,9 @@
 import * as R from 'ramda'
-import { Style, Icon } from 'ol/style'
+import { Style, Icon, Stroke } from 'ol/style'
+import LineString from 'ol/geom/LineString'
 import ms from 'milsymbol'
 import { K } from '../../../shared/combinators'
 import defaultStyle from './style-default'
-
-
 
 /**
  * normalizeSIDC :: String -> String
@@ -70,15 +69,37 @@ const symbolStyleModes = {
   }
 }
 
+const offsetSymbolStyle = (symbolLocation, offset) => {
+  const innerOffsetLineStyle = new Style({
+    stroke: new Stroke({ color: '#000000', width: 2 }),
+    geometry: new LineString([offset, symbolLocation])
+  })
+
+  const outerOffsetLineStyle = new Style({
+    stroke: new Stroke({ color: '#FFFFFF', width: 4 }),
+    geometry: new LineString([offset, symbolLocation])
+  })
+
+  return [outerOffsetLineStyle, innerOffsetLineStyle]
+}
+
 // Point geometry, aka symbol.
 const symbolStyle = (feature, resolution) => {
   const { sidc, ...properties } = feature.getProperties()
   const mode = feature.get('selected') ? 'selected' : 'default'
   const symbolProperties = { ...modifiers(properties), ...symbolStyleModes[mode] }
   const symbol = new ms.Symbol(sidc, symbolProperties)
-  return symbol.isValid()
-    ? new Style({ image: icon(symbol) })
-    : defaultStyle(feature)
+  if (!symbol.isValid()) return defaultStyle(feature)
+
+  const originalFeature = feature.get('originalFeature')
+  if (!originalFeature) return new Style({ image: icon(symbol) })
+
+  return [
+    ...offsetSymbolStyle(
+      feature.getGeometry().getCoordinates(),
+      originalFeature.getGeometry().getCoordinates()),
+    new Style({ image: icon(symbol) })
+  ]
 }
 
 
