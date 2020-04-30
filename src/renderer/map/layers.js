@@ -64,6 +64,7 @@ const cloneGeometries = features =>
  * NOTE: Clone looses id from original feature.
  */
 const cloneFeature = feature => K(feature.clone())(clone => {
+  clone.unset('offsetFeature')
   clone.unset('selected')
 })
 
@@ -171,17 +172,17 @@ const mapFeature = (feature, layerId) => {
   const { offset, ...properties } = feature.getProperties()
   if (!offset) return [feature]
 
-  const offsetMarker = new Feature()
-  offsetMarker.setProperties({
+  const offsetFeature = new Feature()
+  offsetFeature.setProperties({
     ...properties,
     geometry: new Point(transform(offset, 'EPSG:4326', 'EPSG:3857')),
     originalFeature: feature,
     offsetHandle: true
   })
-  assignFeatureId(layerId)(offsetMarker)
-  feature.set('offsetMarker', offsetMarker)
+  assignFeatureId(layerId)(offsetFeature)
+  feature.set('offsetFeature', offsetFeature)
 
-  return [offsetMarker, feature]
+  return [offsetFeature, feature]
 }
 
 /**
@@ -211,7 +212,7 @@ const addFeatureCollection = ([layerUri, features]) => {
  */
 const writeFeatureCollection = layerUri => {
   const features = featureCollections[layerUri]
-  const clones = features.getArray().map(cloneFeature)
+  const clones = features.getArray().filter(feature => !feature.get('originalFeature')).map(cloneFeature)
   const filename = features.get('filename')
   fs.writeFileSync(filename, geoJSON.writeFeatures(clones))
 }
@@ -296,7 +297,7 @@ const selectedFeatures = new Collection()
  */
 const select = features => {
   const originalFeatures = features.filter(feature => feature.get('originalFeature')).map(feature => feature.get('originalFeature'))
-  const offsetFeatures = features.filter(feature => feature.get('offsetMarker')).map(feature => feature.get('offsetMarker'))
+  const offsetFeatures = features.filter(feature => feature.get('offsetFeature')).map(feature => feature.get('offsetFeature'))
   selection.select([...features, ...originalFeatures, ...offsetFeatures].map(featureId))
 }
 
@@ -306,7 +307,7 @@ const select = features => {
  */
 const deselect = features => {
   const originalFeatures = features.filter(feature => feature.get('originalFeature')).map(feature => feature.get('originalFeature'))
-  const offsetFeatures = features.filter(feature => feature.get('offsetMarker')).map(feature => feature.get('offsetMarker'))
+  const offsetFeatures = features.filter(feature => feature.get('offsetFeature')).map(feature => feature.get('offsetFeature'))
   selection.deselect([...features, ...originalFeatures, ...offsetFeatures].map(featureId))
 }
 
