@@ -167,7 +167,7 @@ const featuresById = ids =>
  */
 let featureCollections = {}
 
-const mapFeature = feature => {
+const mapFeature = (feature, layerId) => {
   const { offset, ...properties } = feature.getProperties()
   if (!offset) return [feature]
 
@@ -178,6 +178,7 @@ const mapFeature = feature => {
     originalFeature: feature,
     offsetHandle: true
   })
+  assignFeatureId(layerId)(offsetMarker)
 
   return [offsetMarker, feature]
 }
@@ -190,9 +191,8 @@ const addFeatureCollection = ([layerUri, features]) => {
 
   // Add features to corresponding source and
   // propagate feature collection updates to sources.
-
-  features.forEach(feature => geometrySource(feature).addFeatures(mapFeature(feature)))
-  features.on('add', ({ element }) => geometrySource(element).addFeatures(mapFeature(element)))
+  features.forEach(feature => geometrySource(feature).addFeatures(mapFeature(feature, layerId(layerUri))))
+  features.on('add', ({ element }) => geometrySource(element).addFeatures(mapFeature(element, layerId(layerUri))))
 
   features.on('remove', ({ element }) => {
     const source = selection.isSelected(element.getId())
