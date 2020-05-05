@@ -594,7 +594,17 @@ const createTranslate = () => {
   })
 
   interaction.on('translateend', ({ features }) => {
-    const current = cloneGeometries(features)
+    const current = cloneGeometries(features.getArray().map(feature => {
+      const originalFeature = feature.get('originalFeature')
+      if (!originalFeature) return feature
+
+      const offset = transform(feature.getGeometry().getCoordinates(), 'EPSG:3857', 'EPSG:4326')
+
+      originalFeature.set('offset', offset)
+      return originalFeature
+    })
+      .filter(feature => feature.get('originalFeature')))
+
     const command = updateGeometryCommand(initial, current)
 
     // NOTE: No need to apply; geometries are already up to date.
